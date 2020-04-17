@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	uuid "github.com/satori/go.uuid"
 )
 
 //Storer is  interface for  basic Key/Value (real and mock) datastorage for links
 type Storer interface {
-	Get(key string) (string, error)
-	Set(key string) error
-	Do(key string) (bool, error)
+	Do(commandName string, args ...interface{}) (reply interface{}, err error)
 }
 
 // Handler is struct for handlers
