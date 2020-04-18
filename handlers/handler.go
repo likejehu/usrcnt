@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -19,17 +20,17 @@ type Handler struct {
 }
 
 //Hello is handler that creates new session and deals with logic
-func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) error {
 	usrCountkey := "usrcountkey"
 	// Create a new random session token with uuid
 	sessionToken := uuid.NewV4().String()
-	// Set the token in the cache, along with the user whom it represents
+	// Set the token in the cache
 	// The token has an expiry time of 120 seconds
 	_, err := h.Cache.Do("SETEX", sessionToken, "120")
 	if err != nil {
-		// If there is an error in setting the cache, return an internal server error
 		w.WriteHeader(http.StatusInternalServerError)
-		return
+
+		return errors.Wrapf(err, "error getting the result with SETEX")
 	}
 
 	//Set the client cookie for "session_token" as the session token
@@ -46,27 +47,27 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) {
 		if err == http.ErrNoCookie {
 			// If the cookie is not set, return an unauthorized status
 			w.WriteHeader(http.StatusUnauthorized)
-			return
+			return errors.Wrapf(err, "error getting the cookie")
 		}
 		// For any other type of error, return a bad request status
 		w.WriteHeader(http.StatusBadRequest)
-		return
+		return errors.Wrapf(err, "error getting the cookie")
 	}
 	sessionToken = c.Value
 
-	// get the name of the user from our cache, where we set the session token
+	// get the token of the user from our cache
 	response, err := h.Cache.Do("GET", sessionToken)
 	if err != nil {
-		// If there is an error fetching from cache, return an internal server error status
 		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return errors.Wrapf(err, "error getting the session token")
 	}
 	if response == nil {
 		// If the session token is not present in cache, return an unauthorized error
 		w.WriteHeader(http.StatusUnauthorized)
-		return
+		return errors.Wrapf(err, "error: token is not present in cache")
 	}
 	usrCountVal, err := h.Cache.Do("INCR", usrCountkey)
 	w.Write([]byte(fmt.Sprintf("Welcome %s!", response)))
 	w.Write([]byte(fmt.Sprintf("usercount: %v", usrCountVal)))
+	return err
 }
