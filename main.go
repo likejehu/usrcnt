@@ -9,8 +9,11 @@ import (
 )
 
 func main() {
+	// cache is instance of redis storage
+	var cache = *db.NewRedisStore("redis://localhost:6379")
+	defer cache.Close()
 	handler := handlers.Handler{
-		Cache: db.Cache,
+		Cache: cache,
 	}
 	http.HandleFunc("/hello", handler.Hello)
 	// start the server on port 8000

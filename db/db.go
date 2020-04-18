@@ -14,18 +14,14 @@ type RedisStore struct {
 	client *redis.Conn
 }
 
-// Cache is instance of redis storage
-var Cache = NewRedisStore("localhost:6379")
-
 // NewRedisStore returns a new Store Instance
 func NewRedisStore(address string) *redis.Conn {
 	var cache redis.Conn
 	// Initialize the redis connection to a redis instance running on your local machine
-	conn, err := redis.DialURL("redis://localhost")
+	conn, err := redis.DialURL(address)
 	if err != nil {
 		panic(err)
 	}
-	// Assign the connection to the package level `cache` variable
 	cache = conn
 	return &cache
 }
