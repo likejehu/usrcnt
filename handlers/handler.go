@@ -30,7 +30,7 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 
-		return errors.Wrapf(err, "error getting the result with SETEX")
+		return errors.Wrapf(err, "error: getting the result with SETEX")
 	}
 
 	//Set the client cookie for "session_token" as the session token
@@ -47,11 +47,11 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) error {
 		if err == http.ErrNoCookie {
 			// If the cookie is not set, return an unauthorized status
 			w.WriteHeader(http.StatusUnauthorized)
-			return errors.Wrapf(err, "error getting the cookie")
+			return errors.Wrapf(err, "error: cookie is not set")
 		}
 		// For any other type of error, return a bad request status
 		w.WriteHeader(http.StatusBadRequest)
-		return errors.Wrapf(err, "error getting the cookie")
+		return errors.Wrapf(err, "error: getting the cookie")
 	}
 	sessionToken = c.Value
 
@@ -59,7 +59,7 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) error {
 	response, err := h.Cache.Do("GET", sessionToken)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		return errors.Wrapf(err, "error getting the session token")
+		return errors.Wrapf(err, "error: getting the session token")
 	}
 	if response == nil {
 		// If the session token is not present in cache, return an unauthorized error
