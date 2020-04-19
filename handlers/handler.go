@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
 )
 
 //Storer is  interface for  basic Key/Value (real and mock) datastorage for links
@@ -14,26 +14,39 @@ type Storer interface {
 	Do(commandName string, args ...interface{}) (reply interface{}, err error)
 }
 
+//Sessioner is  interface for sessions manager
+type Sessioner interface {
+	ReadCookie(w http.ResponseWriter, r *http.Request) (string, error)
+	NewST() string
+}
+
 // Handler is struct for handlers
 type Handler struct {
-	Cache Storer
+	Cache   Storer
+	Session Sessioner
 }
 
 //Hello is handler that creates new session and deals with logic
-func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) (err error) {
 	usrCountkey := "usrcountkey"
+	sessionToken := ""
+	sessionToken, err = h.Session.ReadCookie(w, r)
+	if sessionToken == "bad req" {
+		log.Print(err)
+		return err
+	}
+	if sessionToken == "cookie is not set" {
+		// Create a new random session token with uuid
+		sessionToken = h.Session.NewST()
+		// Set the token in the cache
+		// The token has an expiry time of 120 seconds
+		_, err = h.Cache.Do("SETEX", sessionToken, "120")
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			log.Print(errors.Wrap(err, "error: getting the result with SETEX"))
+			return err
 
-	// проверить есть ли уже такой пиздюк!!!
-
-	// Create a new random session token with uuid
-	sessionToken := uuid.NewV4().String()
-	// Set the token in the cache
-	// The token has an expiry time of 120 seconds
-	_, err := h.Cache.Do("SETEX", sessionToken, "120")
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-
-		return errors.Wrapf(err, "error: getting the result with SETEX")
+		}
 	}
 
 	//Set the client cookie for "session_token" as the session token
@@ -43,20 +56,6 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) error {
 		Value:   sessionToken,
 		Expires: time.Now().Add(120 * time.Second),
 	})
-
-	// obtain the session token from the requests cookies, which come with every request
-	c, err := r.Cookie("session_token")
-	if err != nil {
-		if err == http.ErrNoCookie {
-			// If the cookie is not set, return an unauthorized status
-			w.WriteHeader(http.StatusUnauthorized)
-			return errors.Wrap(err, "error: cookie is not set")
-		}
-		// For any other type of error, return a bad request status
-		w.WriteHeader(http.StatusBadRequest)
-		return errors.Wrap(err, "error: getting the cookie")
-	}
-	sessionToken = c.Value
 
 	// get the token of the user from our cache
 	response, err := h.Cache.Do("GET", sessionToken)
