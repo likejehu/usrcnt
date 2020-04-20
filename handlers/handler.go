@@ -1,10 +1,8 @@
 package handlers
 
 import (
-	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/pkg/errors"
 )
@@ -17,6 +15,7 @@ type Storer interface {
 //Sessioner is  interface for sessions manager
 type Sessioner interface {
 	ReadCookie(w http.ResponseWriter, r *http.Request) (string, error)
+	SetCookie(w http.ResponseWriter, sessionToken string)
 	NewST() string
 }
 
@@ -28,11 +27,12 @@ type Handler struct {
 
 //Hello is handler that creates new session and deals with logic
 func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) (err error) {
-	usrCountkey := "usrcountkey"
+	usrCountKey := "usrcountkey"
 	sessionToken := ""
 	sessionToken, err = h.Session.ReadCookie(w, r)
 	if sessionToken == "bad req" {
 		log.Print(err)
+		w.WriteHeader(http.StatusBadRequest)
 		return err
 	}
 	if sessionToken == "cookie is not set" {
@@ -47,29 +47,32 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) (err error) {
 			return err
 
 		}
+		h.Session.SetCookie(w, sessionToken)
+		res, err := h.Cache.Do("INCR", usrCountKey)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			log.Print(errors.Wrap(err, "error: setting the result with INCR"))
+			return err
+
+		}
+		usrCountVal, ok := res.(string)
+		if ok {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(usrCountVal))
+		}
 	}
-
-	//Set the client cookie for "session_token" as the session token
-	// set an expiry time of 120 seconds
-	http.SetCookie(w, &http.Cookie{
-		Name:    "session_token",
-		Value:   sessionToken,
-		Expires: time.Now().Add(120 * time.Second),
-	})
-
-	// get the token of the user from our cache
-	response, err := h.Cache.Do("GET", sessionToken)
+	res, err := h.Cache.Do("GET", usrCountKey)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		return errors.Wrap(err, "error: getting the session token")
+		log.Print(errors.Wrap(err, "error: getting the result with GET"))
+		return err
+
 	}
-	if response == nil {
-		// If the session token is not present in cache, return an unauthorized error
-		w.WriteHeader(http.StatusUnauthorized)
-		return errors.Wrap(err, "error: token is not present in cache")
+	usrCountVal, ok := res.(string)
+	if ok {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(usrCountVal))
 	}
-	usrCountVal, err := h.Cache.Do("INCR", usrCountkey)
-	w.Write([]byte(fmt.Sprintf("Welcome %s!", response)))
-	w.Write([]byte(fmt.Sprintf("usercount: %v", usrCountVal)))
-	return err
+	log.Print("This is the end / Beautiful friend")
+	return nil
 }
