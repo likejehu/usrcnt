@@ -15,8 +15,8 @@ type Storer interface {
 	Do(commandName string, args ...interface{}) (reply interface{}, err error)
 }
 
-//Sessioner is  interface for sessions manager
-type Sessioner interface {
+//SessionManager is  interface for sessions manager
+type SessionManager interface {
 	ReadCookie(w http.ResponseWriter, r *http.Request) (string, error)
 	SetCookie(w http.ResponseWriter, sessionToken string)
 	NewST() string
@@ -25,7 +25,7 @@ type Sessioner interface {
 // Handler is struct for handlers
 type Handler struct {
 	Cache   Storer
-	Session Sessioner
+	Session SessionManager
 }
 
 const usrCountKey = "usrcountkey"
@@ -34,6 +34,7 @@ const usrCountKey = "usrcountkey"
 func (h *Handler) Hello(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var usrCountVal int
 	sessionToken, err := h.Session.ReadCookie(w, r)
+
 	log.Print("session token is ", sessionToken)
 	if sessionToken == "bad req" {
 		log.Print(err)
@@ -66,16 +67,28 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 			w.WriteHeader(http.StatusInternalServerError)
 			log.Print(errors.Wrap(err, "error: settin with INCR"))
 		}
-	} else {
-		usrCountVal, err = redis.Int(h.Cache.Do("GET", usrCountKey))
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			log.Print(errors.Wrap(err, "error: getting the result with GET"))
-		}
-		s := strconv.Itoa(usrCountVal)
-		log.Print("usrCountVal is ", usrCountVal)
+		s := strconv.Itoa(res)
 		log.Print("This is the end / Beautiful friend")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(s))
+	} else {
+		//check is session tocken exists in cache
+		e, err := redis.Int(h.Cache.Do("EXISTS", sessionToken))
+		if e == 1 {
+			usrCountVal, err = redis.Int(h.Cache.Do("GET", usrCountKey))
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				log.Print(errors.Wrap(err, "error: getting the result with GET"))
+			}
+			s := strconv.Itoa(usrCountVal)
+			log.Print("usrCountVal is ", usrCountVal)
+			log.Print("This is the end / Beautiful friend")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(s))
+		} else {
+			log.Print("session token:" + sessionToken + " does not exist")
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("Bad token!"))
+		}
 	}
 }

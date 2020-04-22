@@ -23,6 +23,7 @@ func (s *Manager) ReadCookie(w http.ResponseWriter, r *http.Request) (string, er
 		return "bad req", errors.Wrap(err, "error: getting the cookie")
 	}
 	st := c.Value
+
 	return st, nil
 }
 
