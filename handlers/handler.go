@@ -5,14 +5,18 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gomodule/redigo/redis"
 	"github.com/julienschmidt/httprouter"
+	"github.com/likejehu/usrcnt/session"
 	"github.com/pkg/errors"
 )
 
-//Storer is  interface for  basic Key/Value (real and mock) datastorage for links
-type Storer interface {
-	Do(commandName string, args ...interface{}) (reply interface{}, err error)
+//Store is  interface for  basic Key/Value (real and mock) datastorage
+type Store interface {
+	Set(key string, value string) error
+	Get(key string) (int, error)
+	SETNXToZero(key string) error
+	Increment(key string) (int, error)
+	Exists(key string) (int, error)
 }
 
 //SessionManager is  interface for sessions manager
@@ -24,7 +28,7 @@ type SessionManager interface {
 
 // Handler is struct for handlers
 type Handler struct {
-	Cache   Storer
+	Cache   Store
 	Session SessionManager
 }
 
@@ -36,46 +40,48 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 	sessionToken, err := h.Session.ReadCookie(w, r)
 
 	log.Print("session token is ", sessionToken)
-	if sessionToken == "bad req" {
-		log.Print(err)
-		w.WriteHeader(http.StatusBadRequest)
-
-	}
-	if sessionToken == "cookie is not set" {
-		// Create a new random session token with uuid
-		sessionToken = h.Session.NewST()
-		// Set the token in the cache
-		// The token has an expiry time of 120 seconds
-		_, err = h.Cache.Do("SETEX", sessionToken, "120", sessionToken)
-		log.Print("session token is ", sessionToken)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			log.Print(errors.Wrap(err, "error: settin  with SETEX"))
-
+	log.Print("err is ", err)
+	if err != nil {
+		log.Print("err is ", err)
+		if err == session.ErrorNotSet {
+			// Create a new random session token with uuid
+			sessionToken = h.Session.NewST()
+			log.Print("session token is ", sessionToken)
+			// Set the token in the cache
+			// The token has an expiry time of 120 seconds
+			err = h.Cache.Set(sessionToken, sessionToken)
+			log.Print("session token is ", sessionToken)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				log.Print(err)
+			}
+			h.Session.SetCookie(w, sessionToken)
+			// if usrCountKey does not exist set it value to zero
+			err = h.Cache.SETNXToZero(sessionToken)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				log.Print(err)
+			}
+			res, err := h.Cache.Increment(usrCountKey)
+			log.Print("after INCR usrCountVal is now: ", res)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				log.Print(errors.Wrap(err, "error: settin with INCR"))
+			}
+			s := strconv.Itoa(res)
+			log.Print("This is the end / Beautiful friend")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(s))
+		} else {
+			log.Print(err)
+			w.WriteHeader(http.StatusBadRequest)
 		}
-		h.Session.SetCookie(w, sessionToken)
-		// if usrCountKey does not exist set it value to zero
-		_, err = h.Cache.Do("SETNX", usrCountKey, 0)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			log.Print(errors.Wrap(err, "error: settin  with SETNX"))
-
-		}
-		res, err := redis.Int(h.Cache.Do("INCR", usrCountKey))
-		log.Print("after INCR usrCountVal is now: ", res)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			log.Print(errors.Wrap(err, "error: settin with INCR"))
-		}
-		s := strconv.Itoa(res)
-		log.Print("This is the end / Beautiful friend")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(s))
 	} else {
 		//check is session tocken exists in cache
-		e, err := redis.Int(h.Cache.Do("EXISTS", sessionToken))
+		e, err := h.Cache.Exists(sessionToken)
+		log.Print("exists: ", e)
 		if e == 1 {
-			usrCountVal, err = redis.Int(h.Cache.Do("GET", usrCountKey))
+			usrCountVal, err = h.Cache.Get(usrCountKey)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				log.Print(errors.Wrap(err, "error: getting the result with GET"))

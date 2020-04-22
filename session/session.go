@@ -8,6 +8,12 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+// Error400 is 404 err for store, when key is not found
+var Error400 = errors.New("bad req")
+
+// ErrorNotSet is 404 err for store, when key is not found
+var ErrorNotSet = errors.New("cookie is not set")
+
 // Manager is an implementation of the Sessioner Interface
 type Manager struct {
 }
@@ -17,10 +23,12 @@ func (s *Manager) ReadCookie(w http.ResponseWriter, r *http.Request) (string, er
 	c, err := r.Cookie("session_token")
 	if err != nil {
 		if err == http.ErrNoCookie {
-			return "cookie is not set", errors.Wrap(err, "error: cookie is not set")
+			err = ErrorNotSet
+			return "cookie is not set", err
 		}
-		// For any other type of error, return a bad request status
-		return "bad req", errors.Wrap(err, "error: getting the cookie")
+		// For any other type of error, return a bad request
+		err = Error400
+		return "bad req", err
 	}
 	st := c.Value
 

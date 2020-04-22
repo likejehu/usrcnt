@@ -11,11 +11,11 @@ import (
 )
 
 func main() {
-	// cache is instance of redis storage
-	var cache = *db.NewRedisStore("redis://localhost:6379")
-	defer cache.Close()
+	// conn is instance of redis.Conn
+	var conn = db.RedisCache.Client
+	defer conn.Close()
 	handler := handlers.Handler{
-		Cache:   cache,
+		Cache:   db.RedisCache,
 		Session: session.SM,
 	}
 	router := httprouter.New()
