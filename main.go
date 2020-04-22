@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/julienschmidt/httprouter"
 	"github.com/likejehu/usrcnt/db"
 	"github.com/likejehu/usrcnt/handlers"
 	"github.com/likejehu/usrcnt/helpers"
@@ -17,7 +18,8 @@ func main() {
 		Cache:   cache,
 		Session: helpers.SM,
 	}
-	http.HandleFunc("/hello", handler.Hello)
+	router := httprouter.New()
+	router.GET("/hello", handler.Hello)
 	// start the server on port 8000
-	log.Fatal(http.ListenAndServe(":8000", nil))
+	log.Fatal(http.ListenAndServe(":8000", router))
 }

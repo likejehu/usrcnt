@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/gomodule/redigo/redis"
+	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
 )
 
@@ -28,7 +29,7 @@ type Handler struct {
 }
 
 //Hello is handler that creates new session and deals with logic
-func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Hello(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	usrCountKey := "usrcountkey"
 	var usrCountVal int
 	sessionToken := ""
@@ -44,7 +45,7 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) {
 		sessionToken = h.Session.NewST()
 		// Set the token in the cache
 		// The token has an expiry time of 120 seconds
-		_, err = h.Cache.Do("SETEX", "sessiontoken", "120", sessionToken)
+		_, err = h.Cache.Do("SETEX", sessionToken, "120", sessionToken)
 		log.Print("session token is ", sessionToken)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -52,7 +53,9 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) {
 
 		}
 		h.Session.SetCookie(w, sessionToken)
-		_, err := h.Cache.Do("INCR", usrCountKey)
+		h.Cache.Do("SETNX", usrCountKey, usrCountVal)
+		res, err := redis.Int(h.Cache.Do("INCR", "usrcountkey"))
+		log.Print("after INCR usrCountVal is now: ", res)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			log.Print(errors.Wrap(err, "error: setting the result with INCR"))
