@@ -53,6 +53,7 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 
 		}
 		h.Session.SetCookie(w, sessionToken)
+		// if usrCountKey does not exist set it value to zero
 		h.Cache.Do("SETNX", usrCountKey, usrCountVal)
 		res, err := redis.Int(h.Cache.Do("INCR", "usrcountkey"))
 		log.Print("after INCR usrCountVal is now: ", res)
