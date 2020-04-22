@@ -6,6 +6,7 @@ import (
 
 	"github.com/likejehu/usrcnt/db"
 	"github.com/likejehu/usrcnt/handlers"
+	"github.com/likejehu/usrcnt/helpers"
 )
 
 func main() {
@@ -13,7 +14,8 @@ func main() {
 	var cache = *db.NewRedisStore("redis://localhost:6379")
 	defer cache.Close()
 	handler := handlers.Handler{
-		Cache: cache,
+		Cache:   cache,
+		Session: helpers.SM,
 	}
 	http.HandleFunc("/hello", handler.Hello)
 	// start the server on port 8000
