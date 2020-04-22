@@ -28,11 +28,11 @@ type Handler struct {
 	Session Sessioner
 }
 
+const usrCountKey = "usrcountkey"
+
 //Hello is handler that creates new session and deals with logic
 func (h *Handler) Hello(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	usrCountKey := "usrcountkey"
 	var usrCountVal int
-	sessionToken := ""
 	sessionToken, err := h.Session.ReadCookie(w, r)
 	log.Print("session token is ", sessionToken)
 	if sessionToken == "bad req" {
@@ -49,28 +49,33 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 		log.Print("session token is ", sessionToken)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			log.Print(errors.Wrap(err, "error: getting the result with SETEX"))
+			log.Print(errors.Wrap(err, "error: settin  with SETEX"))
 
 		}
 		h.Session.SetCookie(w, sessionToken)
 		// if usrCountKey does not exist set it value to zero
-		h.Cache.Do("SETNX", usrCountKey, usrCountVal)
-		res, err := redis.Int(h.Cache.Do("INCR", "usrcountkey"))
+		_, err = h.Cache.Do("SETNX", usrCountKey, 0)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			log.Print(errors.Wrap(err, "error: settin  with SETNX"))
+
+		}
+		res, err := redis.Int(h.Cache.Do("INCR", usrCountKey))
 		log.Print("after INCR usrCountVal is now: ", res)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			log.Print(errors.Wrap(err, "error: setting the result with INCR"))
+			log.Print(errors.Wrap(err, "error: settin with INCR"))
 		}
+	} else {
+		usrCountVal, err = redis.Int(h.Cache.Do("GET", usrCountKey))
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			log.Print(errors.Wrap(err, "error: getting the result with GET"))
+		}
+		s := strconv.Itoa(usrCountVal)
+		log.Print("usrCountVal is ", usrCountVal)
+		log.Print("This is the end / Beautiful friend")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(s))
 	}
-	log.Print("i got the cookies!")
-	usrCountVal, err = redis.Int(h.Cache.Do("GET", usrCountKey))
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Print(errors.Wrap(err, "error: getting the result with GET"))
-	}
-	s := strconv.Itoa(usrCountVal)
-	log.Print("usrCountVal is ", usrCountVal)
-	log.Print("This is the end / Beautiful friend")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(s))
 }

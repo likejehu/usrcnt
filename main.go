@@ -7,7 +7,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/likejehu/usrcnt/db"
 	"github.com/likejehu/usrcnt/handlers"
-	"github.com/likejehu/usrcnt/helpers"
+	"github.com/likejehu/usrcnt/session"
 )
 
 func main() {
@@ -16,7 +16,7 @@ func main() {
 	defer cache.Close()
 	handler := handlers.Handler{
 		Cache:   cache,
-		Session: helpers.SM,
+		Session: session.SM,
 	}
 	router := httprouter.New()
 	router.GET("/hello", handler.Hello)
