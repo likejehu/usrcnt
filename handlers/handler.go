@@ -71,7 +71,7 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 			w.WriteHeader(http.StatusBadRequest)
 		}
 	} else {
-		//check is session tocken exists in cache
+		//check is session token exists in cache
 		e, err := h.Cache.Exists(sessionToken)
 		log.Print("exists: ", e)
 		if e == 0 {
