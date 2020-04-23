@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/go-chi/chi"
 	"github.com/likejehu/usrcnt/db"
 	"github.com/likejehu/usrcnt/handlers"
 	"github.com/likejehu/usrcnt/session"
@@ -18,8 +18,8 @@ func main() {
 		Cache:   db.RedisCache,
 		Session: session.SM,
 	}
-	router := httprouter.New()
-	router.GET("/hello", handler.Hello)
+	r := chi.NewRouter()
+	r.Get("/hello", handler.Hello)
 	// start the server on port 8000
-	log.Fatal(http.ListenAndServe(":8000", router))
+	log.Fatal(http.ListenAndServe(":8000", r))
 }

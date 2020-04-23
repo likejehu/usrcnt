@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/likejehu/usrcnt/session"
 	"github.com/pkg/errors"
 )
@@ -35,7 +34,7 @@ type Handler struct {
 const usrCountKey = "usrcountkey"
 
 //Hello is handler that creates new session and deals with logic
-func (h *Handler) Hello(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) {
 	var usrCountVal int
 	sessionToken, err := h.Session.ReadCookie(w, r)
 	log.Print("session token is ", sessionToken)
@@ -55,7 +54,7 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 			}
 			h.Session.SetCookie(w, sessionToken)
 			// if usrCountKey does not exist set it value to zero
-			err = h.Cache.SETNXToZero(sessionToken)
+			err = h.Cache.SETNXToZero(usrCountKey)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				log.Print(err)
