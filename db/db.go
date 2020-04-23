@@ -60,7 +60,7 @@ func (r *RedisStore) Increment(key string) (int, error) {
 func (r *RedisStore) Exists(key string) (int, error) {
 	e, err := redis.Int(r.Client.Do("EXISTS", key))
 	if err != nil {
-		return e, err
+		return e, errors.Wrap(err, "error while checkin if token exists")
 	}
 
 	return e, nil

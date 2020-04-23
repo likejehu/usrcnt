@@ -74,20 +74,19 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 		//check is session tocken exists in cache
 		e, err := h.Cache.Exists(sessionToken)
 		log.Print("exists: ", e)
-		if e == 1 {
-			usrCountVal, err = h.Cache.Get(usrCountKey)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				log.Print(errors.Wrap(err, "error: getting the result with GET"))
-			}
-		} else {
+		if e == 0 {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("Bad token!"))
+			log.Print(err)
 			log.Print("session token:" + sessionToken + " does not exist")
 			return
 		}
 	}
 	usrCountVal, err = h.Cache.Get(usrCountKey)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Print(errors.Wrap(err, "error: getting the result with GET"))
+	}
 	s := strconv.Itoa(usrCountVal)
 	log.Print("usrCountVal is ", s)
 	log.Print("This is the end / Beautiful friend")
