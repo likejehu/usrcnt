@@ -65,7 +65,7 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) {
 			log.Print("after INCR usrCountVal is now: ", usrCountVal)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
-				log.Print(errors.Wrap(err, "error: settin with INCR"))
+				log.Print(err)
 				return
 			}
 		} else {
