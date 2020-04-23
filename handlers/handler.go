@@ -38,11 +38,9 @@ const usrCountKey = "usrcountkey"
 func (h *Handler) Hello(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var usrCountVal int
 	sessionToken, err := h.Session.ReadCookie(w, r)
-
 	log.Print("session token is ", sessionToken)
 	log.Print("err is ", err)
 	if err != nil {
-		log.Print("err is ", err)
 		if err == session.ErrorNotSet {
 			// Create a new random session token with uuid
 			sessionToken = h.Session.NewST()
@@ -62,16 +60,12 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 				w.WriteHeader(http.StatusInternalServerError)
 				log.Print(err)
 			}
-			res, err := h.Cache.Increment(usrCountKey)
-			log.Print("after INCR usrCountVal is now: ", res)
+			usrCountVal, err := h.Cache.Increment(usrCountKey)
+			log.Print("after INCR usrCountVal is now: ", usrCountVal)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				log.Print(errors.Wrap(err, "error: settin with INCR"))
 			}
-			s := strconv.Itoa(res)
-			log.Print("This is the end / Beautiful friend")
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(s))
 		} else {
 			log.Print(err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -86,15 +80,17 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 				w.WriteHeader(http.StatusInternalServerError)
 				log.Print(errors.Wrap(err, "error: getting the result with GET"))
 			}
-			s := strconv.Itoa(usrCountVal)
-			log.Print("usrCountVal is ", usrCountVal)
-			log.Print("This is the end / Beautiful friend")
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(s))
 		} else {
-			log.Print("session token:" + sessionToken + " does not exist")
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("Bad token!"))
+			log.Print("session token:" + sessionToken + " does not exist")
+			return
 		}
 	}
+	usrCountVal, err = h.Cache.Get(usrCountKey)
+	s := strconv.Itoa(usrCountVal)
+	log.Print("usrCountVal is ", s)
+	log.Print("This is the end / Beautiful friend")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(s))
 }
