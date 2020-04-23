@@ -24,9 +24,7 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	//routing
-
 	r.Get("/hello", handler.Hello)
-
 	// start the server on port 8000
 	log.Fatal(http.ListenAndServe(":8000", r))
 }
