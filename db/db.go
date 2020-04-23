@@ -56,7 +56,6 @@ func (r *RedisStore) Increment(key string) (int, error) {
 }
 
 // Exists checks if the specified key is in use
-// Returns 0 when an error occurs.
 func (r *RedisStore) Exists(key string) (int, error) {
 	e, err := redis.Int(r.Client.Do("EXISTS", key))
 	if err != nil {

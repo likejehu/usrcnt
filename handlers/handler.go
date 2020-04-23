@@ -51,6 +51,7 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				log.Print(err)
+				return
 			}
 			h.Session.SetCookie(w, sessionToken)
 			// if usrCountKey does not exist set it value to zero
@@ -58,16 +59,19 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				log.Print(err)
+				return
 			}
 			usrCountVal, err := h.Cache.Increment(usrCountKey)
 			log.Print("after INCR usrCountVal is now: ", usrCountVal)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				log.Print(errors.Wrap(err, "error: settin with INCR"))
+				return
 			}
 		} else {
 			log.Print(err)
 			w.WriteHeader(http.StatusBadRequest)
+			return
 		}
 	} else {
 		//check is session token exists in cache
@@ -85,6 +89,7 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Print(errors.Wrap(err, "error: getting the result with GET"))
+		return
 	}
 	s := strconv.Itoa(usrCountVal)
 	log.Print("usrCountVal is ", s)
