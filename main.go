@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 	"github.com/likejehu/usrcnt/db"
 	"github.com/likejehu/usrcnt/handlers"
 	"github.com/likejehu/usrcnt/session"
@@ -19,7 +20,13 @@ func main() {
 		Session: session.SM,
 	}
 	r := chi.NewRouter()
+	//middleware
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	//routing
+
 	r.Get("/hello", handler.Hello)
+
 	// start the server on port 8000
 	log.Fatal(http.ListenAndServe(":8000", r))
 }

@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/likejehu/usrcnt/session"
-	"github.com/pkg/errors"
 )
 
 //Store is  interface for  basic Key/Value (real and mock) datastorage
@@ -37,17 +36,15 @@ const usrCountKey = "usrcountkey"
 func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) {
 	var usrCountVal int
 	sessionToken, err := h.Session.ReadCookie(w, r)
-	log.Print("session token is ", sessionToken)
 	log.Print("err is ", err)
 	if err != nil {
 		if err == session.ErrorNotSet {
 			// Create a new random session token with uuid
 			sessionToken = h.Session.NewST()
-			log.Print("session token is ", sessionToken)
 			// Set the token in the cache
 			// The token has an expiry time of 120 seconds
 			err = h.Cache.Set(sessionToken, sessionToken)
-			log.Print("session token is ", sessionToken)
+
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				log.Print(err)
@@ -76,7 +73,6 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) {
 	} else {
 		//check is session token exists in cache
 		e, err := h.Cache.Exists(sessionToken)
-		log.Print("exists: ", e)
 		if e == 0 {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("Bad token!"))
@@ -88,11 +84,10 @@ func (h *Handler) Hello(w http.ResponseWriter, r *http.Request) {
 	usrCountVal, err = h.Cache.Get(usrCountKey)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Print(errors.Wrap(err, "error: getting the result with GET"))
+		log.Print(err)
 		return
 	}
 	s := strconv.Itoa(usrCountVal)
-	log.Print("usrCountVal is ", s)
 	log.Print("This is the end / Beautiful friend")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(s))
